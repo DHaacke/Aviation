@@ -1,11 +1,6 @@
-----------------------------------------------------------
--- Written by Farley Farley
--- Adapted by Alexandre Santini for the Tango2
--- Further adapted by Doug Haacke for TBS Mambo 128 x 64 for use with long range
--- farley <at> neonsurge __dot__ com
--- From: https://github.com/AndrewFarley/Taranis-XLite-Q7-Lua-Dashboard
--- Please feel free to submit issues, feedback, etc.
-----------------------------------------------------------
+--------------------------------------------------------------------------
+-- Adapted by Doug Haacke for TBS Mambo 128 x 64 for use with long range
+--------------------------------------------------------------------------
 
 -- Templating
 
