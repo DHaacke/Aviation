@@ -129,8 +129,6 @@ local function init()
 	gpsId = getTelemetryId("GPS")
 	--number of satellites crossfire
 	gpssatId = getTelemetryId("Sats")
-	--if Stats can't be read, try to read Tmp2 (number of satellites SBUS/FRSKY)
-	if (gpssatId == -1) then gpssatId = getTelemetryId("Tmp2") end	
 end
 
 local function background()	
