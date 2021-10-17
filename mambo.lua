@@ -44,7 +44,7 @@ local gpsSATS           = 0
 local gpsFIX            = 0
 local gpsDtH            = 0
 local gpsTotalDist      = 0
-local minSats           = 1
+local minSats           = 0
 
 
 ------- HELPERS -------
@@ -172,9 +172,9 @@ end
 
 ------- GPS HELPERS --------
 local function write_log()
-	now = getTime()    
-    if oldTimeWrite + logWriteWaitTime < now then
-		ctr = ctr + 1		
+	now = getTime()
+  if oldTimeWrite + logWriteWaitTime < now then
+	  ctr = ctr + 1		
 		timePowerOn = SecondsToClock(getGlobalTimer()["session"])
 						
 		file = io.open(logFilename, "a")    						
@@ -209,17 +209,17 @@ local function gpsInit()
 	gpssatId = getTelemetryId("Sats")
 end
 
-local function gpsBackground()	
 
-	----------------------------------------------------------------------
+----------------------------------------------------------------------
 	-- get Latitude, Longitude
 	----------------------------------------------------------------------
-	gpsLatLon = getValue(gpsId)
+local function gpsBackground()	
+  gpsLatLon = getValue(gpsId)
 	if (type(gpsLatLon) == "table") then 			
 		gpsLAT = rnd(gpsLatLon["lat"], 6)
 		gpsLON = rnd(gpsLatLon["lon"], 6)			
 		--set home postion only if more than 5 sats available
-		if (tonumber(gpsSATS) > 5) then
+		if (tonumber(gpsSATS) > minSats) then
 			gpsLAT_H = rnd(gpsLatLon["pilot-lat"], 6)
 			gpsLON_H = rnd(gpsLatLon["pilot-lon"], 6)	
 		end
@@ -246,26 +246,25 @@ local function gpsBackground()
     -- get calculated distance from home and write log
 	----------------------------------------------------------------------		
 	if (tonumber(gpsSATS) >= minSats) then
-	    if (gpsLAT ~= gpsPrevLAT) and (gpsLON ~=  gpsPrevLON) and (gpsLAT_H ~= 0) and  (gpsLON_H ~= 0) then		
-			-- distance to home
-			gpsDtH = rnd(calc_Distance(gpsLAT, gpsLON, gpsLAT_H, gpsLON_H),2)			
-			gpsDtH = string.format("%.2f",gpsDtH)		
-			-- total distance traveled					
-			if (gpsPrevLAT ~= 0) and  (gpsPrevLON ~= 0) then	
-				gpsTotalDist = rnd(tonumber(gpsTotalDist) + calc_Distance(gpsLAT,gpsLON,gpsPrevLAT,gpsPrevLON),2)			
-				gpsTotalDist = string.format("%.2f",gpsTotalDist)					
-			end
-			coordinates_prev = string.format("%02d",ctr) ..", ".. gpsPrevLAT..", " .. gpsPrevLON
-			coordinates_current = string.format("%02d",ctr+1) ..", ".. gpsLAT..", " .. gpsLON 
-			gpsPrevLAT = gpsLAT
-			gpsPrevLON = gpsLON	
+      if (gpsLAT ~= gpsPrevLAT) and (gpsLON ~=  gpsPrevLON) and (gpsLAT_H ~= 0) and  (gpsLON_H ~= 0) then		
+        -- distance to home
+        gpsDtH = rnd(calc_Distance(gpsLAT, gpsLON, gpsLAT_H, gpsLON_H),2)			
+        gpsDtH = string.format("%.2f",gpsDtH)		
+        -- total distance traveled					
+        if (gpsPrevLAT ~= 0) and  (gpsPrevLON ~= 0) then	
+          gpsTotalDist = rnd(tonumber(gpsTotalDist) + calc_Distance(gpsLAT, gpsLON, gpsPrevLAT, gpsPrevLON), 2)
+          gpsTotalDist = string.format("%.2f",gpsTotalDist)					
+        end
+        prevCoordinates = string.format("%02d",ctr) ..", ".. gpsPrevLAT..", " .. gpsPrevLON
+        currCoordinates = string.format("%02d",ctr+1) ..", ".. gpsLAT..", " .. gpsLON 
+        gpsPrevLAT = gpsLAT
+        gpsPrevLON = gpsLON
 
-            write_log()
-		end 
-	end			
+        write_log()
+		  end 
+	end
+
 end
-
-
 ------- END OF GPS HELPERS --------
 
 
@@ -295,14 +294,21 @@ local function drawTime()
   end
 
 local function drawDemo()
-    lcd.drawText(0,   9,  "RxBt: ", SMLSIZE)
-    lcd.drawText(30,  9,  rxBat, SMLSIZE)
+    lcd.drawText(0,   9, "RxBt: ", SMLSIZE)
+    lcd.drawText(30,  9,  rnd(rxBat, 2), SMLSIZE)
     lcd.drawText(0,  19, "Bat_: ", SMLSIZE)
-    lcd.drawText(30, 19,  bat, SMLSIZE)
+    lcd.drawText(30, 19,  rnd(bat, 1) .. "%", SMLSIZE)
     lcd.drawText(0,  29, "Arm: ", SMLSIZE)
     lcd.drawText(30, 29,  armed, SMLSIZE)
     lcd.drawText(0,  39, "Mode: ", SMLSIZE)
     lcd.drawText(30, 39,  modeText, SMLSIZE)
+    lcd.drawText(30, 49,  gpsFIX, SMLSIZE)
+    if (type(gpsLatLon) == "table") then
+      lcd.drawText(0,  59, gpsLAT_H .. ", " .. gpsLON_H, SMLSIZE)
+    end
+    now = getTime()
+    lcd.drawText(70,  9,  (oldTimeWrite + logWriteWaitTime), SMLSIZE)
+    lcd.drawText(70, 19,  now, SMLSIZE)
 end
 ------- END OF DRAW FUNCTIONS -------
 
@@ -345,7 +351,6 @@ local function gatherInput(event)
     mode = getValue('sb')
     -- Reset
     
-
     modeText = getModeText()
     
     -- Do some event handling to figure out what button(s) were pressed
@@ -379,6 +384,8 @@ local function gatherInput(event)
       lcd.drawText( 64 - math.ceil((#modeText * 5) / 2),0, modeText, SMLSIZE)
     end
     -- armText = getValue("ls03")
+
+    gpsBackground() 
   
     -- draw the pertinent lines and rectangles
     drawFrames()
@@ -398,15 +405,13 @@ local function gatherInput(event)
 
     drawDemo()
 
-	gpsBackground() 
-	
-	--reset telemetry data / total distance on "long press enter"
-	if reset == 0 then
-		gpsDtH          = 0
-		gpsTotalDist    = 0
-		gpsLAT_H        = 0
-		gpsLON_H        = 0
-	end 
+    --reset telemetry data / total distance on "long press enter"
+    if reset == 0 then
+      gpsDtH          = 0
+      gpsTotalDist    = 0
+      gpsLAT_H        = 0
+      gpsLON_H        = 0
+    end 
     
     return 0
   end
